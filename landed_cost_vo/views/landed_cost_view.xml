@@ -1,0 +1,58 @@
+<odoo>
+    <record model="ir.ui.view" id="landed_cost_form_inherit">
+        <field name="name">stock.landed.cost.form.inherit</field>
+        <field name="model">stock.landed.cost</field>
+        <field name="inherit_id" ref="stock_landed_costs.view_stock_landed_cost_form"/>     
+        <field name="arch" type="xml"> 
+            <page name="valuation_adjustments" position="after">
+                <page string="Información por producto" name="Información_por_producto">
+                <field name="product_detail_ids">
+                    <form string="Lineas de información">
+                        <group>
+                            <group>
+                                <field name="product_id" readonly="1"/>
+                                <field name="quantity" readonly="1"/>
+                            </group>
+                            <group>
+                                <field name="actual_cost" widget="monetary" readonly="1"/>
+                                <field name="additional_cost" widget="monetary" readonly="1"/>
+                                <field name="new_cost" widget="monetary" readonly="1"/>
+                            </group>
+                        </group>
+                    </form>
+                    <tree create="0">
+                        <field name="product_id" readonly="1"/>
+                        <field name="quantity" readonly="1"/>
+                        <field name="actual_cost" widget="monetary" readonly="1"/>
+                        <field name="additional_cost" widget="monetary" readonly="1"/>
+                        <field name="new_cost" widget="monetary" readonly="1"/>
+                    </tree>
+                </field>
+            </page>
+        </page>
+        <!-- <xpath expr="//field[@name='picking_ids']" position="after">
+            <field name="NumeroDeclaracion" required="1"/>
+            <field name="NumeroManifiesto" required="1"/>
+            <field name="ValoracionCIF" widget="monetary" required="1" />
+            <field name="TotalGravamen" widget="monetary" required="1"/>
+            <field name="TotalItbis" widget="monetary" required="1"/>
+            <field name="TipoImportacion" default="Exterior" required="1"/>/>
+        </xpath> -->
+         <page name="valuation_adjustments" position="after">
+                <page string="Información del Contenedor" name="Información_del_contenedor">
+                <group>
+                    <field name="NumeroDeclaracion" required="1"/>
+                    <field name="NumeroManifiesto" required="1"/>
+                    <field name="BlNum" required="1"/>
+                    <field name="FurgonNum" required="1"/>
+                    <field name="NumSellos" required="1"/>
+                    <field name="ValoracionCIF" widget="monetary" required="1" />
+                    <field name="TotalGravamen" widget="monetary" required="1"/>
+                    <field name="TotalItbis" widget="monetary" required="1"/>
+                    <field name="TipoImportacion" default="Exterior" required="1"/>
+                </group>
+                </page>
+         </page>
+    </field>
+    </record>
+</odoo>

@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<odoo>
+	<data>
+		<template id="stock_landed_costs_template_report_view">
+			<t t-call="web.external_layout">
+                <t t-set="o" t-value="o.with_context({'lang':o.env.lang})"/>
+                       <div class="page">
+            <div class="oe_structure"/>
+
+            <h2 class="mt16">
+                <t>
+                    <span>Costo de Envio # </span>
+                </t>
+                <span t-field="o.name"/>
+            </h2>
+
+            <div class="row mt32 mb32" id="informations">
+                <div t-if="o.date and o.state in ['draft','done']" class="col-auto mw-100 mb-2">
+                    <strong>Fecha:</strong>
+                    <p class="m-0" t-field="o.date"/>
+                </div>
+                <div t-if="o.account_journal_id" class="col-auto mw-100 mb-2">
+                    <strong>Diario:</strong>
+                    <p class="m-0" t-field="o.account_journal_id"/>
+                </div>
+                <div t-if="o.amount_total" class="col-auto mw-100 mb-2">
+                    <strong>Total Costo:</strong>
+                    <p class="m-0" t-field="o.amount_total"/>
+                </div>
+            </div>
+            <div class="row mt32 mb32" id="pickings">
+                <div t-if="o.picking_ids and o.state in ['draft','done']" class="col-auto mw-100 mb-2">
+                    <strong>Transferencias:</strong>
+                    <p class="m-0" t-field="o.picking_ids"/>
+                </div>
+            </div>
+
+           <div>
+                <hr class="my-2"/>
+                <h5><b>Costos Adicionales</b></h5>
+                
+              </div>
+
+            <table class="table table-sm o_main_table">
+                <thead>
+                    <tr>
+                        <th name="th_product_id" class="text-left">Producto</th>
+                        <th name="th_description" class="text-left">Descripción</th>
+                        <th name="th_account_id" class="text-left">Cuenta</th>
+                        <th name="th_split_method" class="text-left">Método de división</th>
+                        <th name="th_priceunit" class="text-right">Coste</th>
+                    </tr>
+                </thead>
+                <tbody class="cost_lines_tbody">
+                    <t t-foreach="o.cost_lines" t-as="line">
+
+                        <tr>
+                            <t>
+                                <td name="td_product_id"><span t-field="line.product_id"/></td>
+                                <td name="td_description"><span t-field="line.name"/></td>
+                                <td name="td_account_id"><span t-field="line.account_id"/></td>
+                                <td name="td_split_method"><span t-field="line.split_method"/></td>
+                                <td name="td_priceunit" class="text-right">
+                                    <span t-field="line.price_unit"/>
+                                </td>
+                            </t>
+                        </tr>
+                    </t>
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="4" class="text-right"><b>Monto Total</b></td>
+                        <td class="text-right"><b><span t-field="o.amount_total"/></b></td>
+                    </tr>
+                </tfoot>
+            </table>
+
+                <div>
+                <hr class="my-2"/>
+                <h5><b>Información por Producto</b></h5>
+                
+              </div>
+
+            <table class="table table-sm o_main_table">
+                <thead>
+                    <tr>
+                        <th name="th_product_id_dtls" class="text-left">Producto</th>
+                        <th name="th_quantity_dtls" class="text-left">Cantidad</th>
+                        <th name="th_actual_cost_dtls" class="text-left">Costo Actual Unitario</th>
+                        <th name="th_import_cost_dtls" class="text-left">Cosde de Impotación</th>
+                        <th name="th_new_cost_dtls" class="text-right">Nuevo Costo</th>
+                    </tr>
+                </thead>
+                <tbody class="cost_lines_tbody">
+                    <t t-foreach="o.product_detail_ids" t-as="line_details">
+
+                        <tr>
+                            <t>
+                                <td name="td_product_id_dtls"><span t-field="line_details.product_id"/></td>
+                                <td name="td_quantity_dtls"><span t-field="line_details.quantity"/></td>
+                                <td name="th_actual_cost_dtls"><span t-field="line_details.actual_cost"/></td>
+                                <td name="th_import_cost_dtls"><span t-field="line_details.additional_cost"/></td>
+                                <td name="th_new_cost_dtls" class="text-right">
+                                    <span t-field="line_details.new_cost"/>
+                                </td>
+                            </t>
+                        </tr>
+                    </t>
+                </tbody>
+            </table>
+        </div>
+            </t>
+		</template>
+
+		<template id="stock_landed_costs_report_template_id">
+			<t t-call="web.html_container">
+				<t t-foreach="docs" t-as="o">
+					<t t-call="astratech_landed_cost_print.stock_landed_costs_template_report_view"  t-lang="lang"/>
+				</t>
+			</t>
+		</template>
+
+	</data>
+</odoo>

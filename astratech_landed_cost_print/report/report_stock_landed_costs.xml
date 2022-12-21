@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+	<data>
+	
+	<report id="stock_landed_costs_report_id"
+				string="Imprimir Costes"
+				model="stock.landed.cost"
+				report_type="qweb-pdf"
+				print_report_name="('Landed Cost - %s' % (object.name))"
+				file="astratech_landed_cost_print.stock_landed_costs_report_template_id"
+				name="astratech_landed_cost_print.stock_landed_costs_report_template_id"/>	
+							
+	</data>
+</odoo>
