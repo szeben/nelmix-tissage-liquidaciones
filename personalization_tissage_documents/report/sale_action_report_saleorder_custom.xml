@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="paperformat_pedidos_presupuestos" model="report.paperformat">
+        <field name="name">Pedidos de ventas</field>
+        <field name="format">Legal</field>
+        <field name="orientation">Portrait</field>
+        <field name="margin_top">60</field>
+        <field name="margin_bottom">20</field>
+        <field name="margin_left">7</field>
+        <field name="margin_right">7</field>
+        <field name="header_line" eval="False"/>
+        <field name="header_spacing">55</field>
+        <field name="dpi">100</field>
+    </record>
+
+    <record id="sale_action_report_saleorder_custom" model="ir.actions.report">
+        <field name="name">Cotización / Pedido Tissage</field>
+        <field name="model">sale.order</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">personalization_tissage_documents.report_saleorder_custom</field>
+        <field name="report_file">personalization_tissage_documents.report_saleorder_custom</field>
+        <field name="print_report_name">(object.state in ('draft', 'sent') and 'Cotización - %s' % (object.name)) or 'Pedido - %s' % (object.name)</field>
+        <field name="paperformat_id" ref="paperformat_pedidos_presupuestos" />
+        <field name="binding_model_id" ref="sale.model_sale_order" />
+        <field name="binding_type">report</field>
+    </record>
+
+    <record id="action_report_pro_forma_invoice_custom" model="ir.actions.report">
+        <field name="name">Factura PRO-FORMA Tissage </field>
+        <field name="model">sale.order</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">personalization_tissage_documents.report_saleorder_pro_forma_custom</field>
+        <field name="report_file">personalization_tissage_documents.report_saleorder_pro_forma_custom</field>
+        <field name="print_report_name">'PRO-FORMA - %s' % (object.name)</field>
+        <field name="binding_model_id" ref="sale.model_sale_order" />
+        <field name="paperformat_id" ref="paperformat_pedidos_presupuestos" />
+        <field name="binding_type">report</field>
+        <field name="groups_id" eval="[(4, ref('sale.group_proforma_sales'))]" />
+    </record>
+
+</odoo>
