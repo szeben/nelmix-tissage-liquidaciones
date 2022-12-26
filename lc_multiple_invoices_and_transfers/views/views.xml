@@ -1,0 +1,46 @@
+<odoo>
+  <data>
+
+    <record id="view_stock_landed_cost_multiple_invoices_transfers_form" model="ir.ui.view">
+      <field name="name">stock.landed.cost.multiple.invoices.transfers.form</field>
+      <field name="model">stock.landed.cost</field>
+      <field name="inherit_id" ref="stock_landed_costs.view_stock_landed_cost_form"/>
+      <field name="arch" type="xml">
+        <xpath expr="//group/group/field[@name='picking_ids']" position="replace"></xpath>
+        <xpath expr="//group/group/field[@name='vendor_bill_id']" position="replace"></xpath>
+
+        <page name="additional_costs" position="before">
+          <page name="invoices_and_transfers" string="Transferencias y Facturas">
+
+            <group attrs="{'invisible': [('target_model', '!=', 'picking')]}">
+              <field name="picking_ids" attrs="{'readonly': [('state', '!=', 'draft')]}" domain="[('company_id', '=', company_id), ('move_lines.stock_valuation_layer_ids', '!=', False)]">
+                <tree>
+                  <field name="name"/>
+                  <field name="partner_id"/>
+                  <field name="location_dest_id"/>
+                  <field name="state" optional="show" widget="badge" decoration-success="state == 'done'" decoration-info="state not in ('done', 'cancel', 'draft')" decoration-muted="state == 'draft'"/>
+                </tree>
+              </field>
+            </group>
+
+            <group>
+              <field name="vendor_bill_ids" widget="many2many">
+                <tree>
+                  <field name="name"/>
+                  <field name="invoice_date_due"/>
+                  <field name="amount_tax" widget='monetary'/>
+                  <field name="amount_total" widget='monetary'/>
+                  <field name="amount_total_in_currency_signed" widget='monetary'/>
+                  <field name="payment_state" widget="badge" decoration-danger="payment_state == 'not_paid'" decoration-warning="payment_state in ('partial', 'in_payment')" decoration-success="payment_state in ('paid', 'reversed')" attrs="{'invisible': [('payment_state', 'in', ('invoicing_legacy'))]}" optional="show"/>
+                  <field name="state" optional="show" widget="badge" decoration-success="state == 'done'" decoration-info="state not in ('done', 'cancel', 'draft')" decoration-muted="state == 'draft'"/>
+                </tree>
+              </field>
+            </group>
+
+          </page>
+        </page>
+      </field>
+    </record>
+
+  </data>
+</odoo>
