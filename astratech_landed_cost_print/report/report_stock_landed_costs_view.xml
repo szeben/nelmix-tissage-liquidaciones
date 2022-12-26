@@ -88,11 +88,7 @@
                         <th name="th_product_id_dtls" class="text-left">Producto</th>
                         <th name="th_quantity_dtls" class="text-left">Cantidad</th>
                         <th name="th_actual_cost_dtls" class="text-left">Costo Actual Unitario</th>
-<<<<<<< HEAD
                         <th name="th_import_cost_dtls" class="text-left">Costo de Importación</th>
-=======
-                        <th name="th_import_cost_dtls" class="text-left">Cosde de Impotación</th>
->>>>>>> 629b43ff44e128be75b1908923e16eda32e36792
                         <th name="th_new_cost_dtls" class="text-right">Nuevo Costo</th>
                     </tr>
                 </thead>
