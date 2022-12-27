@@ -12,7 +12,7 @@
         <page name="additional_costs" position="before">
           <page name="invoices_and_transfers" string="Transferencias y Facturas">
 
-            <group attrs="{'invisible': [('target_model', '!=', 'picking')]}">
+            <group attrs="{'invisible': [('target_model', '!=', 'picking')]}" style="display: block; overflow-x: auto; white-space: nowrap; scrollbar-width: thin;">
               <field name="picking_ids" attrs="{'readonly': [('state', '!=', 'draft')]}" domain="[('company_id', '=', company_id), ('move_lines.stock_valuation_layer_ids', '!=', False)]">
                 <tree>
                   <field name="name"/>
@@ -23,7 +23,7 @@
               </field>
             </group>
 
-            <group>
+            <group style="display: block; overflow-x: auto; white-space: nowrap; scrollbar-width: thin;">
               <field name="vendor_bill_ids" widget="many2many">
                 <tree>
                   <field name="name"/>

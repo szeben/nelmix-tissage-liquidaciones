@@ -116,7 +116,7 @@ class StockLandedCost(models.Model):
                 all_amls = reduce(
                     lambda b1, b2: b1.line_ids | b2.line_ids,
                     vendor_bill_ids,
-                    self.env['account.move.line']
+                    self.env['account.move']
                 ) | cost.account_move_id.line_ids
 
                 for product in cost.cost_lines.product_id:

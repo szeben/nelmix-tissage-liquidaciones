@@ -1,60 +1,51 @@
 <odoo>
   <data>
-    <!-- explicit list view definition -->
-<!--
-    <record model="ir.ui.view" id="lc_detail_and_indicators.list">
-      <field name="name">lc_detail_and_indicators list</field>
-      <field name="model">lc_detail_and_indicators.lc_detail_and_indicators</field>
+
+    <record id="view_stock_landed_cost_detail_form" model="ir.ui.view">
+      <field name="name">stock.landed.cost.detail.form</field>
+      <field name="model">stock.landed.cost</field>
+      <field name="inherit_id" ref="stock_landed_costs.view_stock_landed_cost_form"/>
       <field name="arch" type="xml">
-        <tree>
-          <field name="name"/>
-          <field name="value"/>
-          <field name="value2"/>
+
+        <button name="action_view_stock_valuation_layers" position="after">
+          <button type="object" name="action_view_closeouts_detail" class="oe_stat_button" icon="fa-area-chart" groups="stock.group_stock_manager">
+            <div class="o_field_widget o_stat_info">
+              <span class="o_stat_value">
+                <field name="total_transfers"/>
+              </span>
+              <span class="o_stat_text">
+                Detalle de Liquidación
+              </span>
+            </div>
+          </button>
+        </button>
+
+      </field>
+    </record>
+
+    <record id="view_move_tree_closeouts_detail" model="ir.ui.view">
+      <field name="name">stock.move.closeouts.detail.tree</field>
+      <field name="model">stock.move</field>
+      <field name="priority" eval="20"/>
+      <field name="arch" type="xml">
+
+        <tree multi_edit="1" sample="1">
+          <field name="id" string="Item" />
+          <field name="product_uom_qty" string="Qty" readonly="1" />
+          <field name="product_id" string="Descripción" readonly="1" optional="show" />
+          <field name="partner_id" string="Suplidor" readonly="1" optional="show" />
+          <field name="price_unit" string="C/U US$" widget="monetary" />
+          <field name="price_subtotal" widget="monetary" />
         </tree>
+
       </field>
     </record>
--->
 
-    <!-- actions opening views on models -->
-<!--
-    <record model="ir.actions.act_window" id="lc_detail_and_indicators.action_window">
-      <field name="name">lc_detail_and_indicators window</field>
-      <field name="res_model">lc_detail_and_indicators.lc_detail_and_indicators</field>
-      <field name="view_mode">tree,form</field>
+    <record id="closeouts_detail_action_window" model="ir.actions.act_window">
+      <field name="name">Detalle de Liquidación</field>
+      <field name="res_model">stock.move</field>
+      <field name="view_mode">tree</field>
     </record>
--->
 
-    <!-- server action to the one above -->
-<!--
-    <record model="ir.actions.server" id="lc_detail_and_indicators.action_server">
-      <field name="name">lc_detail_and_indicators server</field>
-      <field name="model_id" ref="model_lc_detail_and_indicators_lc_detail_and_indicators"/>
-      <field name="state">code</field>
-      <field name="code">
-        action = {
-          "type": "ir.actions.act_window",
-          "view_mode": "tree,form",
-          "res_model": model._name,
-        }
-      </field>
-    </record>
--->
-
-    <!-- Top menu item -->
-<!--
-    <menuitem name="lc_detail_and_indicators" id="lc_detail_and_indicators.menu_root"/>
--->
-    <!-- menu categories -->
-<!--
-    <menuitem name="Menu 1" id="lc_detail_and_indicators.menu_1" parent="lc_detail_and_indicators.menu_root"/>
-    <menuitem name="Menu 2" id="lc_detail_and_indicators.menu_2" parent="lc_detail_and_indicators.menu_root"/>
--->
-    <!-- actions -->
-<!--
-    <menuitem name="List" id="lc_detail_and_indicators.menu_1_list" parent="lc_detail_and_indicators.menu_1"
-              action="lc_detail_and_indicators.action_window"/>
-    <menuitem name="Server to list" id="lc_detail_and_indicators" parent="lc_detail_and_indicators.menu_2"
-              action="lc_detail_and_indicators.action_server"/>
--->
   </data>
 </odoo>
