@@ -114,9 +114,9 @@ class StockLandedCost(models.Model):
 
             if vendor_bill_ids and cost.company_id.anglo_saxon_accounting:
                 all_amls = reduce(
-                    lambda b1, b2: b1.line_ids | b2.line_ids,
+                    lambda b1, b2: b1 | b2.line_ids,
                     vendor_bill_ids,
-                    self.env['account.move']
+                    self.env['account.move.line']
                 ) | cost.account_move_id.line_ids
 
                 for product in cost.cost_lines.product_id:
