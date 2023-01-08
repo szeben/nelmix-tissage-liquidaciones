@@ -5,6 +5,15 @@ from functools import reduce
 from odoo import api, fields, models
 
 
+class IrActionsActWindowView(models.Model):
+    _inherit = 'ir.actions.act_window.view'
+
+    view_mode = fields.Selection(
+        selection_add=[('list', 'List')],
+        ondelete={'list': 'cascade'},
+    )
+
+
 class StockMove(models.Model):
     _inherit = "stock.move"
 
@@ -26,19 +35,25 @@ class StockMove(models.Model):
         readonly=True,
         domain=[('move_type', '=', 'in_invoice')]
     )
-    exchange_rate = fields.Float(
-        string="Tasa de cambio",
-        compute="_compute_totals",
-        readonly=True,
-    )
 
     @api.depends('price_unit', 'product_uom_qty')
     def _compute_totals(self):
+        date = (
+            self._context.get('landed_cost_date')
+            or self._context.get('date')
+            or fields.Date.today()
+        )
+        currency_usd_id = self.env["res.currency"].with_context({
+            'date': date,
+        }).search([("name", "=", "USD")])
+        landed_cost_currency_id = self.env["res.currency"].browse(
+            self._context.get('landed_cost_currency_id')
+        )
+
         for record in self:
             record.price_subtotal = record.price_unit * record.product_uom_qty
             record.purchase_order_id = record.picking_id.purchase_id
             record.invoice_ids = record.purchase_order_id.invoice_ids
-            record.exchange_rate = 0.0
 
 
 class StockPicking(models.Model):
@@ -87,14 +102,15 @@ class StockLandedCost(models.Model):
         return dict(
             action,
             view_type='list',
-            view_id=view.id,
-            views=[
-                [view.id, 'list'],
-                # [False, 'form']
-            ],
+            # view_id=view.id,
+            # views=[
+            #     [view.id, 'list'],
+            #     # [False, 'form']
+            # ],
             domain=[('id', 'in', move_ids)],
             context=dict(
                 self.env.context,
                 landed_cost_date=self.date,
+                landed_cost_currency_id=self.currency_id.id,
             )
         )

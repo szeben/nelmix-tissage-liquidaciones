@@ -55,24 +55,22 @@
                         </thead>
                         <tbody class="cost_lines_tbody">
                             <t t-foreach="o.cost_lines" t-as="line">
-                                <tr>
-                                    <t>
-                                        <td name="td_product_id">
-                                            <span t-field="line.product_id"/>
-                                        </td>
-                                        <td name="td_description">
-                                            <span t-field="line.name"/>
-                                        </td>
-                                        <td name="td_account_id">
-                                            <span t-field="line.account_id"/>
-                                        </td>
-                                        <td name="td_split_method">
-                                            <span t-field="line.split_method"/>
-                                        </td>
-                                        <td name="td_priceunit" class="text-right">
-                                            <span t-field="line.price_unit"/>
-                                        </td>
-                                    </t>
+                                <tr t-att-key="line_index">
+                                    <td name="td_product_id">
+                                        <span t-field="line.product_id"/>
+                                    </td>
+                                    <td name="td_description">
+                                        <span t-field="line.name"/>
+                                    </td>
+                                    <td name="td_account_id">
+                                        <span t-field="line.account_id"/>
+                                    </td>
+                                    <td name="td_split_method">
+                                        <span t-field="line.split_method"/>
+                                    </td>
+                                    <td name="td_priceunit" class="text-right">
+                                        <span t-field="line.price_unit"/>
+                                    </td>
                                 </tr>
                             </t>
                         </tbody>
@@ -109,27 +107,23 @@
                         </thead>
                         <tbody class="cost_lines_tbody">
                             <t t-foreach="o.product_detail_ids" t-as="line_details">
-
-                                <tr>
-                                    <t>
-                                        <td name="td_product_id_dtls">
-                                            <span t-field="line_details.product_id"/>
-                                        </td>
-                                        <td name="td_quantity_dtls">
-                                            <span t-field="line_details.quantity"/>
-                                        </td>
-                                        <td name="th_actual_cost_dtls">
-                                            <span t-field="line_details.actual_cost"/>
-                                        </td>
-                                        <td name="th_import_cost_dtls">
-                                            <span t-field="line_details.additional_cost"/>
-                                        </td>
-                                        <td name="th_new_cost_dtls" class="text-right">
-                                            <span t-field="line_details.new_cost"/>
-                                        </td>
-                                    </t>
+                                <tr t-att-key="line_details_index">
+                                    <td name="td_product_id_dtls">
+                                        <span t-field="line_details.product_id"/>
+                                    </td>
+                                    <td name="td_quantity_dtls">
+                                        <span t-field="line_details.quantity"/>
+                                    </td>
+                                    <td name="th_actual_cost_dtls">
+                                        <span t-field="line_details.actual_cost"/>
+                                    </td>
+                                    <td name="th_import_cost_dtls">
+                                        <span t-field="line_details.additional_cost"/>
+                                    </td>
+                                    <td name="th_new_cost_dtls" class="text-right">
+                                        <span t-field="line_details.new_cost"/>
+                                    </td>
                                 </tr>
-
                             </t>
                         </tbody>
                     </table>
