@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- Stock landed costs - related subtypes for messaging / Chatter -->
+        <record id="mt_pre_stock_landed_cost_open" model="mail.message.subtype">
+            <field name="name">Done</field>
+            <field name="res_model">pre.stock.landed.cost</field>
+            <field name="description">Preliminary landed cost validated</field>
+        </record>
+
+        <record id="seq_stock_landed_costs" model="ir.sequence">
+            <field name="name">Preliminary Stock Landed Costs</field>
+            <field name="code">pre.stock.landed.cost</field>
+            <field name="prefix">PL/%(year)s/</field>
+            <field name="padding">4</field>
+            <field name="company_id" eval="False"/>
+        </record>
+    </data>
+</odoo>

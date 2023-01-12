@@ -1,2 +1,5 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_lc_pre_liquidation_lc_pre_liquidation,lc_pre_liquidation.lc_pre_liquidation,model_lc_pre_liquidation_lc_pre_liquidation,base.group_user,1,1,1,1
+"access_pre_stock_landed_cost",pre.stock.landed.cost,model_pre_stock_landed_cost,"stock.group_stock_manager",1,1,1,1
+"access_pre_stock_landed_cost_lines",pre.stock.landed.cost.lines,model_pre_stock_landed_cost_lines,"stock.group_stock_manager",1,1,1,1
+"access_pre_stock_valuation_adjustment_lines",pre.stock.valuation.adjustment.lines,"model_pre_stock_valuation_adjustment_lines","stock.group_stock_manager",1,1,1,1
+"access_pre_stock_landed_cost_product_lines",pre.stock.landed.cost.product.lines,model_pre_stock_landed_cost_product_lines,"stock.group_stock_manager",1,1,1,1
