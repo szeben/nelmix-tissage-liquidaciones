@@ -1,14 +1,11 @@
 # -*- coding: utf-8 -*-
-from pyexpat import model
-from odoo import models, fields, tools, api, _
+from odoo import _, api, fields, models, tools
 from odoo.addons import decimal_precision as dp
-from odoo.exceptions import UserError, ValidationError
-
 
 
 class AdjustmentLines(models.Model):
     _inherit = 'stock.valuation.adjustment.lines'
-    additional_landed_cost = fields.Monetary(  
+    additional_landed_cost = fields.Monetary(
         string='Additional Landed Cost')
 
 
@@ -20,7 +17,7 @@ class StockLandedCost(models.Model):
         inverse_name='landed_cost_id',
         string='Detalle por producto',
         copy=False)
-        
+
     NumeroDeclaracion = fields.Char(string='Numero de declaracion')
     NumeroManifiesto = fields.Char(string='Numero de manifiesto')
     ValoracionCIF = fields.Float(string='Valoracion CIF')
@@ -37,30 +34,22 @@ class StockLandedCost(models.Model):
         detail_lines = self.env['stock.product.detail']
         detail_lines.search([('landed_cost_id', 'in', self.ids)]).unlink()
 
-        products = {}
         for line in self.valuation_adjustment_lines:
             if line.product_id.type != 'product':
                 continue
+
             additional_cost = line.additional_landed_cost / line.quantity
             value = line.former_cost/line.quantity
-            if line.product_id.id not in products.keys():
-                products[line.product_id.id] = {
-                    'name': self.name,
-                    'landed_cost_id': self.id,
-                    'product_id': line.product_id.id,
-                    'quantity': line.quantity,
-                    'actual_cost': value,
-                    'additional_cost': additional_cost,
-                    'new_cost': value + additional_cost,
-                }
-                
-            else:
-                products[line.product_id.id]['additional_cost'] += additional_cost
-                products[line.product_id.id]['new_cost'] += additional_cost
 
-        for key, value in products.items():
-            self.env['stock.product.detail'].create(value)
-
+            self.env['stock.product.detail'].create({
+                'name': self.name,
+                'landed_cost_id': self.id,
+                'product_id': line.product_id.id,
+                'quantity': line.quantity,
+                'actual_cost': value,
+                'additional_cost': additional_cost,
+                'new_cost': value + additional_cost,
+            })
 
         AdjustementLines = self.env['stock.valuation.adjustment.lines']
         AdjustementLines.search([('cost_id', 'in', self.ids)]).unlink()
