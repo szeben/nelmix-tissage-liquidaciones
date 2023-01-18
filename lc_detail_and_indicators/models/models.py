@@ -157,7 +157,7 @@ class StockMove(models.Model):
         if landed_cost:
             total_usd = sum(self.mapped('price_subtotal'))
             total_rd = sum(self.mapped('amount_total_rd'))
-            self.factor = (landed_cost.amount_total + total_rd) / total_usd
+            self.factor = (landed_cost.amount_total + total_rd) / total_usd if total_usd else 1.0
         else:
             self.factor = 1.0
 
@@ -166,7 +166,10 @@ class StockMove(models.Model):
         for record in self:
             record.current_price_unit_rd = record.price_unit_rd * record.factor
             record.current_total_rd = record.current_price_unit_rd * record.product_uom_qty
-            record.current_price_unit_usd = record.current_price_unit_rd / record.currency_rate_usd
+            record.current_price_unit_usd = (
+                record.current_price_unit_rd / record.currency_rate_usd
+                if record.currency_rate_usd else 0.0
+            )
             record.current_total_usd = record.current_price_unit_usd * record.product_uom_qty
 
     @api.depends('currency_rate_usd', 'pvp_usd')
@@ -177,7 +180,10 @@ class StockMove(models.Model):
     @api.depends('pvp_usd', 'pvp_rd', 'current_price_unit_usd', 'current_price_unit_rd', 'product_uom_qty')
     def _compute_extra_indicators(self):
         for record in self:
-            record.margin = (record.pvp_usd - record.current_price_unit_usd) * 100 / record.pvp_usd
+            record.margin = (
+                (record.pvp_usd - record.current_price_unit_usd) * 100 / record.pvp_usd
+                if record.pvp_usd else 0.0
+            )
             record.profit_usd = (record.pvp_usd - record.current_price_unit_usd) * record.product_uom_qty
             record.profit_rd = (record.pvp_rd - record.current_price_unit_rd) * record.product_uom_qty
 
