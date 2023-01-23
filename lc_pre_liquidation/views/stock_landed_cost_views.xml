@@ -49,9 +49,7 @@
                                     <form string="Productos">
                                         <group>
                                             <group>
-                                                <field name="product_id"
-                                                    domain="[('landed_cost_ok', '=', True)]"
-                                                    context="{'default_landed_cost_ok': True}"/>
+                                                <field name="product_id"/>
                                                 <field name="quantity"/>
                                                 <field name="price_unit"/>
                                                 <field name="total"/>
@@ -59,9 +57,7 @@
                                         </group>
                                     </form>
                                     <tree string="Productos" editable="bottom">
-                                        <field name="product_id"
-                                            domain="[('landed_cost_ok', '=', True)]"
-                                            context="{'default_landed_cost_ok': True, 'default_detailed_type': 'service'}"/>
+                                        <field name="product_id"/>
                                         <field name="quantity"/>
                                         <field name="price_unit"/>
                                         <field name="total"/>
@@ -73,10 +69,9 @@
                                     <form string="Cost Lines">
                                         <group>
                                             <group>
-                                                <!-- <field name="product_id"
+                                                <field name="product_id"
                                                     domain="[('landed_cost_ok', '=', True)]"
-                                                    context="{'default_landed_cost_ok': True}"/> -->
-                                                <field name="product_id"/>
+                                                    context="{'default_landed_cost_ok': True}"/>
                                                 <field name="price_unit"/>
                                                 <field name="currency_id" invisible="1"/>
                                             </group>
@@ -89,9 +84,9 @@
                                         <field name="name"/>
                                     </form>
                                     <tree string="Cost Lines" editable="bottom">
-                                        <!-- <field name="product_id"
+                                        <field name="product_id"
                                             domain="[('landed_cost_ok', '=', True)]"
-                                            context="{'default_landed_cost_ok': True, 'default_detailed_type': 'service'}"/> -->
+                                            context="{'default_landed_cost_ok': True, 'default_detailed_type': 'service'}"/>
                                         <field name="product_id"/>
                                         <field name="name"/>
                                         <field name="account_id" options="{'no_create': True}"/>

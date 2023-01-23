@@ -45,7 +45,6 @@
           <field name="current_total_rd" sum="Total" optional="show" />
           <field name="current_price_unit_usd" optional="show" />
           <field name="current_total_usd" sum="Total" optional="show" />
-          <field name="factor" optional="show" />
           <field name="pvp_usd" optional="show" />
           <field name="pvp_rd" optional="show" />
           <field name="margin" optional="show" />

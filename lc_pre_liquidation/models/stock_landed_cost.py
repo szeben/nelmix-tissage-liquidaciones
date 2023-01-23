@@ -217,7 +217,6 @@ class StockLandedCost(models.Model):
 
             vals = {
                 'product_id': line.product_id.id,
-                'move_id': None,  # move.id,
                 'quantity': line.quantity,
                 'former_cost': 0.0,  # sum(line.stock_valuation_layer_ids.mapped('value')),
                 'weight': line.product_id.weight * line.quantity,
