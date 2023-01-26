@@ -1,11 +1,15 @@
 # -*- coding: utf-8 -*-
 # Part of Odoo. See LICENSE file for full copyright and licensing details.
 
-from collections import defaultdict
+import json
+from collections import OrderedDict, defaultdict
+from functools import reduce
+from statistics import mean, median
 
 from odoo import _, api, fields, models, tools
 from odoo.exceptions import UserError
 from odoo.tools.float_utils import float_is_zero
+
 
 SPLIT_METHOD = [
     ('equal', 'Equal'),
@@ -33,57 +37,127 @@ class StockLandedCost(models.Model):
         return lc_journal
 
     name = fields.Char(
-        'Name', default=lambda self: _('New'),
-        copy=False, readonly=True, tracking=True)
+        'Name',
+        default=lambda self: _('New'),
+        copy=False,
+        readonly=True,
+        tracking=True
+    )
     date = fields.Date(
-        'Date', default=fields.Date.context_today,
-        copy=False, required=True, states={'done': [('readonly', True)]}, tracking=True)
-    target_model = fields.Selection(
-        [('picking', 'Transfers')], string="Apply On",
-        required=True, default='picking',
-        copy=False, states={'done': [('readonly', True)]})
-    picking_ids = fields.Many2many(
-        'stock.picking', string='Transfers',
-        copy=False, states={'done': [('readonly', True)]})
+        'Date',
+        default=fields.Date.context_today,
+        copy=False,
+        required=True,
+        states={'done': [('readonly', True)]},
+        tracking=True
+    )
+
     cost_lines = fields.One2many(
-        'pre.stock.landed.cost.lines', 'cost_id', 'Cost Lines',
-        copy=True, states={'done': [('readonly', True)]})
+        'pre.stock.landed.cost.lines',
+        'cost_id',
+        'Cost Lines',
+        copy=True,
+        states={'done': [('readonly', True)]}
+    )
     valuation_adjustment_lines = fields.One2many(
-        'pre.stock.valuation.adjustment.lines', 'cost_id', 'Valuation Adjustments',
-        states={'done': [('readonly', True)]})
+        'pre.stock.valuation.adjustment.lines',
+        'cost_id',
+        'Valuation Adjustments',
+        states={'done': [('readonly', True)]}
+    )
     description = fields.Text(
-        'Item Description', states={'done': [('readonly', True)]})
+        'Item Description',
+        states={'done': [('readonly', True)]}
+    )
     amount_total = fields.Monetary(
-        'Total', compute='_compute_total_amount',
-        store=True, tracking=True)
-    state = fields.Selection([
-        ('draft', 'Draft'),
-        ('done', 'Posted'),
-        ('cancel', 'Cancelled')], 'State', default='draft',
-        copy=False, readonly=True, tracking=True)
+        'Total',
+        compute='_compute_total_amount',
+        store=True,
+        tracking=True
+    )
+    state = fields.Selection(
+        [('draft', 'Draft'), ('done', 'Posted'), ('cancel', 'Cancelled')],
+        'State',
+        default='draft',
+        copy=False,
+        readonly=True,
+        tracking=True
+    )
     account_move_id = fields.Many2one(
-        'account.move', 'Journal Entry',
-        copy=False, readonly=True)
+        'account.move',
+        'Journal Entry',
+        copy=False,
+        readonly=True
+    )
     account_journal_id = fields.Many2one(
-        'account.journal', 'Account Journal',
-        required=True, states={'done': [('readonly', True)]}, default=lambda self: self._default_account_journal_id())
-    company_id = fields.Many2one('res.company', string="Company",
-                                 related='account_journal_id.company_id')
-    stock_valuation_layer_ids = fields.One2many('stock.valuation.layer', 'stock_landed_cost_id')
-    currency_id = fields.Many2one('res.currency', related='company_id.currency_id')
-    product_lines = fields.One2many('pre.stock.landed.cost.product.lines', 'cost_id', 'Product Lines',
-                                    states={'done': [('readonly', True)]})
-    rate_currency_id = fields.Float('Rate', digits=(12, 6), default=lambda self: self.env.company.currency_id.rate)
+        'account.journal',
+        'Account Journal',
+        required=True,
+        states={'done': [('readonly', True)]},
+        default=lambda self: self._default_account_journal_id()
+    )
+    company_id = fields.Many2one(
+        'res.company',
+        string="Company",
+        related='account_journal_id.company_id'
+    )
+    stock_valuation_layer_ids = fields.One2many(
+        'stock.valuation.layer',
+        'stock_landed_cost_id'
+    )
+    currency_id = fields.Many2one(
+        'res.currency',
+        default=lambda self: self.env.ref('base.USD')
+    )
+    product_lines = fields.One2many(
+        'pre.stock.landed.cost.product.lines',
+        'cost_id',
+        string='Product Lines',
+        states={'done': [('readonly', True)]}
+    )
+    currency_rate_usd = fields.Float(
+        'Rate',
+        digits=(12, 6),
+        default=lambda self: self.env.ref('base.USD').inverse_rate
+    )
+    product_detail_ids = fields.One2many(
+        comodel_name='pre.stock.product.detail',
+        inverse_name='landed_cost_id',
+        string='Detalle por producto',
+        copy=False
+    )
+
+    # Detail
+    total_closeouts = fields.Integer(
+        string="Total de liquidaciones",
+        compute="_compute_total_closeouts",
+        readonly=True,
+    )
+    factor = fields.Float(
+        string="Factor",
+        compute="_compute_detail_metrics",
+        readonly=True,
+    )
+    avg_margin = fields.Float(
+        string="Margen promedio",
+        compute="_compute_detail_metrics",
+        readonly=True,
+    )
+    median_margin = fields.Float(
+        string="Margen medio",
+        compute="_compute_detail_metrics",
+        readonly=True,
+    )
+    metrics = fields.Text(
+        string="Métricas",
+        compute="_compute_detail_metrics",
+        readonly=True,
+    )
 
     @api.depends('cost_lines.price_unit')
     def _compute_total_amount(self):
         for cost in self:
             cost.amount_total = sum(line.price_unit for line in cost.cost_lines)
-
-    @api.onchange('target_model')
-    def _onchange_target_model(self):
-        if self.target_model != 'picking':
-            self.picking_ids = False
 
     @api.model
     def create(self, vals):
@@ -198,21 +272,8 @@ class StockLandedCost(models.Model):
         lines = []
 
         # TODO: this should be done in batch
-        # for move in self._get_targeted_move_ids():
-        #     # it doesn't make sense to make a landed cost for a product that isn't set as being valuated in real time at real cost
-        #     if move.product_id.cost_method not in ('fifo', 'average') or move.state == 'cancel' or not move.product_qty:
-        #         continue
-        #     vals = {
-        #         'product_id': move.product_id.id,
-        #         'move_id': move.id,
-        #         'quantity': move.product_qty,
-        #         'former_cost': sum(move.stock_valuation_layer_ids.mapped('value')),
-        #         'weight': move.product_id.weight * move.product_qty,
-        #         'volume': move.product_id.volume * move.product_qty
-        #     }
-        #     lines.append(vals)
         for line in self.product_lines:
-            if line.product_id.cost_method not in ('fifo', 'average') or not line.quantity:
+            if line.product_id.cost_method not in {'fifo', 'average'} or not line.quantity:
                 continue
 
             vals = {
@@ -225,20 +286,19 @@ class StockLandedCost(models.Model):
             lines.append(vals)
 
         if not lines:
-            target_model_descriptions = dict(self._fields['target_model']._description_selection(self.env))
             raise UserError(_(
-                "You cannot apply landed costs on the chosen %s(s). Landed costs "
-                "can only be applied for products with FIFO or average costing method.",
-                target_model_descriptions[self.target_model]
+                "You cannot apply landed costs on the chosen product_id. Landed costs "
+                "can only be applied for products with FIFO or average costing method."
             ))
         return lines
 
     def compute_landed_cost(self):
-        AdjustementLines: "AdjustmentLines" = self.env['pre.stock.valuation.adjustment.lines']
+        AdjustementLines = self.env['pre.stock.valuation.adjustment.lines']
         AdjustementLines.search([('cost_id', 'in', self.ids)]).unlink()
 
+        digits = 2
         towrite_dict = {}
-        # for cost in self.filtered(lambda cost: cost._get_targeted_move_ids()):
+
         for cost in self:
             if not cost.product_lines:
                 continue
@@ -253,10 +313,7 @@ class StockLandedCost(models.Model):
 
             for val_line_values in all_val_line_values:
                 for cost_line in cost.cost_lines:
-                    val_line_values.update({
-                        'cost_id': cost.id,
-                        'cost_line_id': cost_line.id
-                    })
+                    val_line_values.update({'cost_id': cost.id, 'cost_line_id': cost_line.id})
                     self.env['pre.stock.valuation.adjustment.lines'].create(val_line_values)
 
                 total_qty += val_line_values.get('quantity', 0.0)
@@ -264,8 +321,10 @@ class StockLandedCost(models.Model):
                 total_volume += val_line_values.get('volume', 0.0)
 
                 former_cost = val_line_values.get('former_cost', 0.0)
+
                 # round this because former_cost on the valuation lines is also rounded
                 total_cost += cost.currency_id.round(former_cost)
+                # total_cost += tools.float_round(former_cost, precision_digits=digits) if digits else former_cost
 
                 total_line += 1
 
@@ -297,6 +356,12 @@ class StockLandedCost(models.Model):
                             value = fnc(value, line.price_unit - value_split)
                             value_split += value
 
+                        # if digits:
+                        #     value = tools.float_round(value, precision_digits=digits, rounding_method='UP')
+                        #     fnc = min if line.price_unit > 0 else max
+                        #     value = fnc(value, line.price_unit - value_split)
+                        #     value_split += value
+
                         if valuation.id not in towrite_dict:
                             towrite_dict[valuation.id] = value
                         else:
@@ -304,6 +369,26 @@ class StockLandedCost(models.Model):
 
         for key, value in towrite_dict.items():
             AdjustementLines.browse(key).write({'additional_landed_cost': value})
+
+        detail_lines = self.env['pre.stock.product.detail']
+        detail_lines.search([('landed_cost_id', 'in', self.ids)]).unlink()
+
+        for line in self.valuation_adjustment_lines:
+            if line.product_id.type != 'product':
+                continue
+
+            additional_cost = line.additional_landed_cost / line.quantity
+            value = line.former_cost/line.quantity
+
+            self.env['stock.product.detail'].create({
+                'name': self.name,
+                'landed_cost_id': self.id,
+                'product_id': line.product_id.id,
+                'quantity': line.quantity,
+                'actual_cost': value,
+                'additional_cost': additional_cost,
+                'new_cost': value + additional_cost,
+            })
 
         return True
 
@@ -313,27 +398,16 @@ class StockLandedCost(models.Model):
         action = self.env["ir.actions.actions"]._for_xml_id("stock_account.stock_valuation_layer_action")
         return dict(action, domain=domain)
 
-    def _get_targeted_move_ids(self):
-        return self.picking_ids.move_lines
-
     def _check_can_validate(self):
         if any(cost.state != 'draft' for cost in self):
             raise UserError(_('Only draft landed costs can be validated'))
 
         # TODO: check if the cost is already applied on the stock moves
-        # for cost in self:
-        #     if not cost._get_targeted_move_ids():
-        #         target_model_descriptions = dict(self._fields['target_model']._description_selection(self.env))
-        #         raise UserError(_('Please define %s on which those additional costs should apply.',
-        #                         target_model_descriptions[cost.target_model]))
-
         for cost in self:
             if not cost.product_lines:
                 raise UserError(_('Please add some cost lines.'))
 
     def _check_sum(self):
-        """ Check if each cost line its valuation lines sum to the correct amount
-        and if the overall total amount is correct also """
         prec_digits = self.env.company.currency_id.decimal_places
         for landed_cost in self:
             total_amount = sum(landed_cost.valuation_adjustment_lines.mapped('additional_landed_cost'))
@@ -352,83 +426,82 @@ class StockLandedCost(models.Model):
                 return False
         return True
 
+    @api.depends('product_lines')
+    def _compute_total_closeouts(self):
+        for record in self:
+            record.total_closeouts = len(record.product_lines().ids)
 
-class StockLandedCostLine(models.Model):
-    _name = 'pre.stock.landed.cost.lines'
-    _description = 'Landed Cost Lines'
-    _inherit = 'stock.landed.cost.lines'
+    @api.depends('product_lines')
+    def _compute_detail_metrics(self):
+        for record in self:
+            if self.product_lines:
+                record.factor = self.product_lines[0].factor
 
-    cost_id = fields.Many2one(
-        'pre.stock.landed.cost',
-        string='Landed Cost',
-        required=True,
-        ondelete='cascade'
-    )
+                margin_values = self.product_lines.mapped('margin')
+                record.avg_margin = mean(margin_values)
+                record.median_margin = median(margin_values)
 
+                metrics = record._get_metrics()
+                record.metrics = json.dumps(
+                    list(metrics.values()),
+                )
 
-class AdjustmentLines(models.Model):
-    _name = 'pre.stock.valuation.adjustment.lines'
-    _description = 'Stock Valuation Adjustment Lines'
-    _inherit = 'stock.valuation.adjustment.lines'
+            else:
+                record.factor = 1.0
+                record.avg_margin = 0.0
+                record.median_margin = 0.0
+                record.metrics = json.dumps([])
 
-    cost_id = fields.Many2one(
-        'pre.stock.landed.cost',
-        string='Landed Cost',
-        ondelete='cascade', required=True
-    )
-    cost_line_id = fields.Many2one(
-        'pre.stock.landed.cost.lines',
-        string='Cost Line',
-        readonly=True
-    )
+    def _get_metrics(self):
+        self.ensure_one()
 
-    @api.model
-    def _add_field(self, name, field):
-        if name == 'move_id':
-            # ignore the field
-            # move_id = fields.Many2one('stock.move', 'Stock Move', readonly=True)
-            return
-        return super()._add_field(name, field)
+        price_subtotal = self.product_lines.mapped('price_subtotal')
+        amount_total_rd = self.product_lines.mapped('amount_total_rd')
 
-    def _create_accounting_entries(self, move, qty_out):
-        # TDE CLEANME: product chosen for computation ?``
-        cost_product = self.cost_line_id.product_id
-        if not cost_product:
-            return False
+        current_total_usd = self.product_lines.mapped('current_total_usd')
+        current_total_rd = self.product_lines.mapped('current_total_rd')
 
-        accounts = self.product_id.product_tmpl_id.get_product_accounts()
-        debit_account_id = accounts.get('stock_valuation') and accounts['stock_valuation'].id or False
+        pvp_usd = self.product_lines.mapped('pvp_usd')
+        pvp_rd = self.product_lines.mapped('pvp_rd')
 
-        # If the stock move is dropshipped move we need to get the cost account instead the stock valuation account
-        # if self.move_id and self.move_id._is_dropshipped():
-        #     debit_account_id = accounts.get('expense') and accounts['expense'].id or False
+        profit_usd = self.product_lines.mapped('profit_usd')
+        profit_rd = self.product_lines.mapped('profit_rd')
 
-        already_out_account_id = accounts['stock_output'].id
-        credit_account_id = self.cost_line_id.account_id.id or cost_product.categ_id.property_stock_account_input_categ_id.id
+        return OrderedDict([
+            ("total_fob", {
+                "string": "Total FOB",
+                "usd": sum(price_subtotal),
+                "rd": sum(amount_total_rd)
+            }),
+            ("current_total_cost", {
+                "string": "Costo Total Actual",
+                "usd": sum(current_total_usd),
+                "rd": sum(current_total_rd)
+            }),
+            ("avg_pvp", {
+                "string": "PVP Promedio",
+                "usd": mean(pvp_usd),
+                "rd": mean(pvp_rd)
+            }),
+            ("median_pvp", {
+                "string": "PVP Media",
+                "usd": median(pvp_usd),
+                "rd": median(pvp_rd)
+            }),
+            ("total_profit", {
+                "string": "Total Ganancia",
+                "usd": sum(profit_usd),
+                "rd": sum(profit_rd)
+            })
+        ])
 
-        if not credit_account_id:
-            raise UserError(_('Please configure Stock Expense Account for product: %s.') % (cost_product.name))
-
-        return self._create_account_move_line(move, credit_account_id, debit_account_id, qty_out, already_out_account_id)
-
-
-class StockLandedCostProductLine(models.Model):
-    _name = 'pre.stock.landed.cost.product.lines'
-    _description = 'Landed Cost Product Lines'
-
-    def _default_currency(self):
-        if self.product_id:
-            return self.product_id.currency_id
-        return self.env.company.currency_id
-
-    cost_id = fields.Many2one('pre.stock.landed.cost', string='Landed Cost', required=True, ondelete='cascade')
-    product_id = fields.Many2one('product.product', string='Producto', required=True)
-    quantity = fields.Float(string='Cantidad', required=True, default=1.0)
-    price_unit = fields.Monetary(string='Precio Unitario', currency_field='currency_id', required=True)
-    currency_id = fields.Many2one('res.currency', string='Currency', required=True, default=_default_currency)
-    total = fields.Float(string='Total', compute='_compute_total', store=True)
-
-    @api.depends('quantity', 'price_unit')
-    def _compute_total(self):
-        for line in self:
-            line.total = line.quantity * line.price_unit
+    def action_view_closeouts_detail(self):
+        action = self.env["ir.actions.actions"]._for_xml_id(
+            "lc_pre_liquidation.pre_liquidation_action_window"
+        )
+        return dict(
+            action,
+            view_type='list',
+            domain=[('id', 'in', self.product_lines.ids)],
+            context=self.env.context
+        )
