@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 
+import json
 from functools import reduce
+from statistics import mean, median
+from collections import OrderedDict
 
 from odoo import api, fields, models
 
@@ -91,8 +94,7 @@ class StockMove(models.Model):
     )
     pvp_usd = fields.Float(
         string="PVP US$",
-        default=lambda self: self.product_id.lst_price,
-        store=True,
+        default=lambda self: self.product_id.lst_price
     )
     pvp_rd = fields.Float(
         string="PVP RD",
@@ -101,7 +103,7 @@ class StockMove(models.Model):
         readonly=True,
     )
     margin = fields.Float(
-        string="Margen",
+        string="Margen %",
         compute="_compute_extra_indicators",
         readonly=True,
     )
@@ -125,12 +127,7 @@ class StockMove(models.Model):
         )
         self.currency_rate_usd = self.env["res.currency"].with_context({
             'date': date,
-        }).search([("name", "=", "USD")]).rate
-
-    @api.onchange('product_id', 'product_id.lst_price')
-    def _onchange_product_lst_price(self):
-        for record in self:
-            record.pvp_usd = record.product_id.lst_price
+        }).search([("name", "=", "USD")]).inverse_rate
 
     @api.depends('picking_id', 'picking_id.purchase_id', 'picking_id.purchase_id.invoice_ids')
     def _compute_info_purchase(self):
@@ -148,16 +145,22 @@ class StockMove(models.Model):
             record.amount_total_rd = record.price_unit_rd * record.product_uom_qty
 
     @api.depends('price_subtotal', 'amount_total_rd')
-    @api.depends_context('landed_cost_id')
+    @api.depends_context('landed_cost_id', 'active_id')
     def _compute_factor(self):
         landed_cost = self.env['stock.landed.cost'].browse(
             self._context.get('landed_cost_id') or self._context.get('active_id')
         )
 
         if landed_cost:
-            total_usd = sum(self.mapped('price_subtotal'))
-            total_rd = sum(self.mapped('amount_total_rd'))
-            self.factor = (landed_cost.amount_total + total_rd) / total_usd if total_usd else 1.0
+            stock_move_ids = self.browse(
+                landed_cost._get_move_ids_without_package().ids
+            )
+            total_usd = sum(stock_move_ids.mapped('price_subtotal'))
+            total_rd = sum(stock_move_ids.mapped('amount_total_rd'))
+            if total_usd:
+                self.factor = (landed_cost.amount_total + total_rd) / total_usd
+            else:
+                self.factor = 1.0
         else:
             self.factor = 1.0
 
@@ -180,12 +183,25 @@ class StockMove(models.Model):
     @api.depends('pvp_usd', 'pvp_rd', 'current_price_unit_usd', 'current_price_unit_rd', 'product_uom_qty')
     def _compute_extra_indicators(self):
         for record in self:
-            record.margin = (
-                (record.pvp_usd - record.current_price_unit_usd) * 100 / record.pvp_usd
-                if record.pvp_usd else 0.0
-            )
+            if record.pvp_usd:
+                record.margin = (record.pvp_usd - record.current_price_unit_usd) * 100 / record.pvp_usd
+            else:
+                record.margin = 0.0
             record.profit_usd = (record.pvp_usd - record.current_price_unit_usd) * record.product_uom_qty
             record.profit_rd = (record.pvp_rd - record.current_price_unit_rd) * record.product_uom_qty
+
+    def get_lst_price_from_product(self, vals):
+        product = self.env['product.product'].browse(vals.get('product_id'))
+        return product.lst_price
+
+    @api.model
+    def create(self, vals_list):
+        if isinstance(vals_list, dict):
+            vals_list['pvp_usd'] = self.get_lst_price_from_product(vals_list)
+        else:
+            for vals in vals_list:
+                vals['pvp_usd'] = self.get_lst_price_from_product(vals)
+        return super().create(vals_list)
 
 
 class StockPicking(models.Model):
@@ -206,13 +222,117 @@ class StockLandedCost(models.Model):
         compute="_compute_total_closeouts",
         readonly=True,
     )
+    currency_rate_usd = fields.Float(
+        string="Tasa de cambio",
+        compute="_compute_currency_rate_usd",
+        readonly=True,
+    )
+    factor = fields.Float(
+        string="Factor",
+        compute="_compute_detail_metrics",
+        readonly=True,
+    )
+    avg_margin = fields.Float(
+        string="Margen promedio",
+        compute="_compute_detail_metrics",
+        readonly=True,
+    )
+    median_margin = fields.Float(
+        string="Margen medio",
+        compute="_compute_detail_metrics",
+        readonly=True,
+    )
+    metrics = fields.Text(
+        string="Métricas",
+        compute="_compute_detail_metrics",
+        readonly=True,
+    )
 
     @api.depends('picking_ids')
     def _compute_total_closeouts(self):
         for record in self:
-            record.total_closeouts = len(
-                record._get_move_ids_without_package().ids
-            )
+            record.total_closeouts = len(record._get_move_ids_without_package().ids)
+
+    @api.depends('date')
+    def _compute_currency_rate_usd(self):
+        for record in self:
+            record.currency_rate_usd = self.env["res.currency"].with_context({
+                'date': record.date,
+            }).browse(self.env.ref('base.USD').id).inverse_rate
+
+    def _get_stock_moves(self) -> 'StockMove':
+        self.ensure_one()
+        return self.env['stock.move'].with_context({
+            "landed_cost_id": self.id,
+            "landed_cost_date": self.date
+        }).browse(self._get_move_ids_without_package().ids)
+
+    @api.depends('picking_ids')
+    def _compute_detail_metrics(self):
+        for record in self:
+            stock_moves = record._get_stock_moves()
+
+            if stock_moves:
+                record.factor = stock_moves[0].factor
+
+                margin_values = stock_moves.mapped('margin')
+                record.avg_margin = mean(margin_values)
+                record.median_margin = median(margin_values)
+
+                metrics = record._get_metrics(stock_moves)
+                record.metrics = json.dumps(
+                    list(metrics.values()),
+                )
+
+            else:
+                record.factor = 1.0
+                record.avg_margin = 0.0
+                record.median_margin = 0.0
+                record.metrics = json.dumps([])
+
+    def _get_metrics(self, stock_moves=None) -> OrderedDict:
+        self.ensure_one()
+        stock_moves = stock_moves or self._get_stock_moves()
+
+        price_subtotal = stock_moves.mapped('price_subtotal')
+        amount_total_rd = stock_moves.mapped('amount_total_rd')
+
+        current_total_usd = stock_moves.mapped('current_total_usd')
+        current_total_rd = stock_moves.mapped('current_total_rd')
+
+        pvp_usd = stock_moves.mapped('pvp_usd')
+        pvp_rd = stock_moves.mapped('pvp_rd')
+
+        profit_usd = stock_moves.mapped('profit_usd')
+        profit_rd = stock_moves.mapped('profit_rd')
+
+        return OrderedDict([
+            ("total_fob", {
+                "string": "Total FOB",
+                "usd": sum(price_subtotal),
+                "rd": sum(amount_total_rd)
+            }),
+            ("current_total_cost", {
+                "string": "Costo Total Actual",
+                "usd": sum(current_total_usd),
+                "rd": sum(current_total_rd)
+            }),
+            ("avg_pvp", {
+                "string": "PVP Promedio",
+                "usd": mean(pvp_usd),
+                "rd": mean(pvp_rd)
+            }),
+            ("median_pvp", {
+                "string": "PVP Media",
+                "usd": median(pvp_usd),
+                "rd": median(pvp_rd)
+            }),
+            ("total_profit", {
+                "string": "Total Ganancia",
+                "usd": sum(profit_usd),
+                "rd": sum(profit_rd)
+            })
+        ])
 
     def _get_move_ids_without_package(self):
         self.ensure_one()
@@ -227,7 +347,6 @@ class StockLandedCost(models.Model):
         action = self.env["ir.actions.actions"]._for_xml_id(
             "lc_detail_and_indicators.closeouts_detail_action_window"
         )
-
         return dict(
             action,
             view_type='list',

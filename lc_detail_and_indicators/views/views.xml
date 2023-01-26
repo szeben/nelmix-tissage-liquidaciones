@@ -20,6 +20,26 @@
           </button>
         </button>
 
+        <page name="valuation_adjustments" position="after">
+          <page string="Indicadores" name="indicators">
+            <group>
+              <group>
+                <field name="total_closeouts" string="Cantidad de lineas de producto"/>
+                <field name="currency_rate_usd"/>
+                <field name="factor"/>
+              </group>
+              <group>
+                <field name="amount_total" string="Total de costos adicionales"/>
+                <field name="avg_margin"/>
+                <field name="median_margin"/>
+              </group>
+            </group>
+            <group>
+              <field name="metrics" widget="table_metrics" nolabel="1" readonly="1"/>
+            </group>
+          </page>
+        </page>
+
       </field>
     </record>
 
@@ -29,28 +49,69 @@
       <field name="priority" eval="20"/>
       <field name="arch" type="xml">
 
-        <tree multi_edit="1" sample="1">
-          <field name="item" />
-          <field name="product_uom_qty" string="Qty" readonly="1" />
-          <field name="product_id" string="Descripción" readonly="1" optional="show" />
-          <field name="supplier_id" optional="show" />
-          <field name="purchase_order_id" optional="show" />
-          <field name="invoice_ids" widget="many2many_tags" optional="show" />
-          <field name="price_unit" string="C/U US$" optional="show" />
-          <field name="price_subtotal" sum="Total" optional="show" />
-          <field name="price_unit_rd" optional="show" />
-          <field name="amount_total_rd" sum="Total" optional="show" />
-          <field name="factor" optional="show" />
-          <field name="current_price_unit_rd" optional="show" />
-          <field name="current_total_rd" sum="Total" optional="show" />
-          <field name="current_price_unit_usd" optional="show" />
-          <field name="current_total_usd" sum="Total" optional="show" />
-          <field name="pvp_usd" optional="show" />
-          <field name="pvp_rd" optional="show" />
-          <field name="margin" optional="show" />
-          <field name="profit_usd" sum="Total" optional="show" />
-          <field name="profit_rd" sum="Total" optional="show" />
+        <tree multi_edit="1" sample="1" create="0" edit="1">
+          <field name="item"/>
+          <field name="product_uom_qty" string="Qty" readonly="1"/>
+          <field name="product_id" string="Descripción" readonly="1" optional="show"/>
+          <field name="supplier_id" optional="show"/>
+          <field name="purchase_order_id" optional="show"/>
+          <field name="invoice_ids" widget="many2many_tags" optional="show"/>
+          <field name="price_unit" string="C/U US$" optional="show"/>
+          <field name="price_subtotal" sum="Total" optional="show"/>
+          <field name="price_unit_rd" optional="show"/>
+          <field name="amount_total_rd" sum="Total" optional="show"/>
+          <field name="factor" optional="show"/>
+          <field name="current_price_unit_rd" optional="show"/>
+          <field name="current_total_rd" sum="Total" optional="show"/>
+          <field name="current_price_unit_usd" optional="show"/>
+          <field name="current_total_usd" sum="Total" optional="show"/>
+          <field name="pvp_usd" optional="show"/>
+          <field name="pvp_rd" optional="show"/>
+          <field name="margin" optional="show"/>
+          <field name="profit_usd" sum="Total" optional="show"/>
+          <field name="profit_rd" sum="Total" optional="show"/>
         </tree>
+
+      </field>
+    </record>
+
+
+    <record id="view_move_form_closeouts_detail" model="ir.ui.view">
+      <field name="name">stock.move.closeouts.detail.form</field>
+      <field name="model">stock.move</field>
+      <field name="priority" eval="20"/>
+      <field name="arch" type="xml">
+
+        <form create="0">
+          <sheet>
+            <group>
+              <group>
+                <field name="item"/>
+                <field name="product_uom_qty" string="Qty" readonly="1"/>
+                <field name="product_id" string="Descripción" readonly="1"/>
+                <field name="supplier_id"/>
+                <field name="purchase_order_id"/>
+                <field name="invoice_ids" widget="many2many_tags"/>
+                <field name="price_unit" string="C/U US$" readonly="1"/>
+                <field name="price_subtotal"/>
+                <field name="price_unit_rd"/>
+                <field name="amount_total_rd"/>
+                <field name="factor"/>
+              </group>
+              <group>
+                <field name="current_price_unit_rd"/>
+                <field name="current_total_rd"/>
+                <field name="current_price_unit_usd"/>
+                <field name="current_total_usd"/>
+                <field name="pvp_usd"/>
+                <field name="pvp_rd"/>
+                <field name="margin"/>
+                <field name="profit_usd"/>
+                <field name="profit_rd"/>
+              </group>
+            </group>
+          </sheet>
+        </form>
 
       </field>
     </record>
@@ -58,14 +119,20 @@
     <record id="closeouts_detail_action_window" model="ir.actions.act_window">
       <field name="name">Detalle de Liquidación</field>
       <field name="res_model">stock.move</field>
-      <field name="view_mode">tree</field>
-      <field name="view_id" ref="view_move_tree_closeouts_detail"/>
+      <field name="view_mode">tree,form</field>
     </record>
 
     <record id="closeouts_detail_action_view" model="ir.actions.act_window.view">
       <field eval="2" name="sequence"/>
       <field name="view_mode">list</field>
       <field name="view_id" ref="view_move_tree_closeouts_detail"/>
+      <field name="act_window_id" ref="closeouts_detail_action_window"/>
+    </record>
+
+    <record id="closeouts_detail_form_action_view" model="ir.actions.act_window.view">
+      <field eval="2" name="sequence"/>
+      <field name="view_mode">form</field>
+      <field name="view_id" ref="view_move_form_closeouts_detail"/>
       <field name="act_window_id" ref="closeouts_detail_action_window"/>
     </record>
 

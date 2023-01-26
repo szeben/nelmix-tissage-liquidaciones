@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="lc_detail_and_indicators.table_metrics" owl="1">
+        <style type="text/css">
+            .col-right {
+                text-align: right;
+                padding-left: 20px;
+                padding-right: 20px;
+            }
+            .col-center {
+                text-align: center;
+                border-bottom: 1pt solid grey;
+                padding-left: 20px;
+                padding-right: 20px;
+            }
+            .table-metrics {
+                align-self: center;
+            }
+        </style>
+        <table class="table-metrics">
+            <thead>
+                <tr>
+                    <th></th>
+                    <th class="col-center">
+                        <strong>USD</strong>
+                    </th>
+                    <th class="col-center">
+                        <strong>RD</strong>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr t-foreach="lines" t-as="line">
+                    <td>
+                        <strong t-esc="line.string"/>
+                    </td>
+                    <td class="col-right" t-esc="line.usd.toFixed('2')"/>
+                    <td class="col-right" t-esc="line.rd.toFixed('2')"/>
+                </tr>
+            </tbody>
+        </table>
+    </t>
+
+</templates>

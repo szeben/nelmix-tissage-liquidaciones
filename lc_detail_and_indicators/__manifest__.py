@@ -37,4 +37,10 @@
     'demo': [
         'demo/demo.xml',
     ],
+    'assets': {
+        'web.assets_backend': [
+            'lc_detail_and_indicators/static/xml/table_template.xml',
+            'lc_detail_and_indicators/static/js/table_widget.js',
+        ],
+    },
 }
